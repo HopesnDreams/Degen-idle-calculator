@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Degen Idle — v4 Full Simulation</title>
+<style>
+:root{
+  --bg:#1a1a1a;--panel:#2a2a2a;--muted:#9aa6b2;--accent:#ff8c42;
+  --card:#2a2a2a;--glass:rgba(255,255,255,0.03);
+  --text-primary:#ffffff;--text-secondary:#cccccc;--text-accent:#ff8c42;
+  --success:#4caf50;--resource-qty:#87ceeb;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;font-family:Inter,system-ui,Roboto,Arial;
+  background:var(--bg);
+  color:var(--text-primary);min-height:100vh;
+}
+.container{max-width:1400px;margin:0 auto;padding:20px}
+.grid{display:grid;grid-template-columns:380px 1fr;gap:20px;margin-top:20px}
+.card{
+  background:var(--card);
+  padding:20px;border-radius:12px;
+}
+label{display:block;color:var(--text-primary);font-size:14px;margin-top:12px;margin-bottom:6px;font-weight:500}
+input[type="number"]{
+  width:100%;padding:10px 12px;border-radius:8px;
+  background:rgba(0,0,0,0.3);color:var(--text-primary);
+  border:1px solid rgba(255,255,255,0.1);font-size:14px;
+}
+select{
+  width:100%;padding:10px 12px;border-radius:8px;
+  background:rgba(40,40,40,0.8);color:var(--text-primary);
+  border:1px solid rgba(255,255,255,0.2);font-size:14px;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;
+  cursor:pointer;
+}
+select option{
+  background:#2a2a2a;color:#ffffff;padding:8px;
+}
+input[type="number"]:focus,select:focus{
+  outline:none;border-color:var(--accent);
+}
+input[type="checkbox"]{
+  width:18px;height:18px;margin-right:8px;cursor:pointer;
+  accent-color:#2196F3;
+}
+.checkbox-label{display:flex;align-items:center;margin-top:12px;cursor:pointer}
+.level-inputs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.input-with-steppers{position:relative;display:flex;align-items:center}
+.input-with-steppers input{flex:1;padding-right:60px}
+.steppers{position:absolute;right:4px;display:flex;flex-direction:column;gap:2px}
+.stepper-btn{
+  width:24px;height:18px;background:rgba(255,255,255,0.1);
+  border:none;border-radius:4px;color:var(--text-primary);
+  cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;
+  padding:0;
+}
+.stepper-btn:hover{background:rgba(255,255,255,0.2)}
+.stepper-btn:active{background:rgba(255,255,255,0.15)}
+.btn{
+  background:var(--accent);
+  border:none;padding:14px 20px;border-radius:10px;
+  font-weight:700;cursor:pointer;margin-top:20px;width:100%;
+  color:#ffffff;font-size:15px;transition:opacity 0.2s;
+}
+.btn:hover{opacity:0.9}
+.btn:active{opacity:0.8}
+.status-text{color:var(--text-primary);font-size:14px;margin-top:8px}
+.status-success{color:var(--success)}
+.status-error{color:#ff6b6b}
+.data-status{margin-bottom:16px;font-size:14px;color:var(--text-primary)}
+.data-status .status-indicator{color:var(--success);margin-left:4px}
+.calc-title{color:var(--text-primary);font-size:20px;font-weight:600;margin:0 0 4px 0;padding:0}
+.calc-subtitle{color:var(--text-secondary);font-size:14px;font-weight:400;margin:0 0 16px 0;padding:0}
+.calc-footer{color:var(--text-secondary);font-size:12px;font-style:italic;margin-top:16px;text-align:center}
+
+/* Right Column Styles */
+.output-header{
+  color:var(--text-primary);font-size:16px;font-weight:600;
+  margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1);
+}
+.output-section{margin-bottom:20px}
+.breakdown-card{
+  background:var(--card);padding:16px;border-radius:8px;
+  margin-bottom:12px;border:1px solid rgba(255,255,255,0.05);
+}
+.breakdown-item-name{
+  color:var(--text-accent);font-size:15px;font-weight:600;
+  display:flex;align-items:center;gap:8px;margin-bottom:8px;
+}
+.breakdown-item-name::before{
+  content:"🔍";font-size:14px;
+}
+.breakdown-level{color:var(--text-primary);font-size:14px;margin-bottom:6px}
+.breakdown-stat{
+  color:var(--text-primary);font-size:14px;
+  display:flex;align-items:center;gap:6px;margin-top:4px;
+}
+.breakdown-stat::before{
+  content:"⛏️";font-size:14px;
+}
+.breakdown-stat.time::before{
+  content:"🕐";font-size:14px;
+}
+.totals-section{
+  background:var(--card);padding:20px;border-radius:8px;
+  text-align:center;border:1px solid rgba(255,255,255,0.05);
+}
+.totals-main{
+  color:var(--text-primary);font-size:18px;font-weight:600;
+  margin-bottom:8px;
+}
+.totals-sub{
+  color:var(--text-secondary);font-size:14px;
+}
+.resources-section{
+  background:var(--card);padding:16px;border-radius:8px;
+  border:1px solid rgba(255,255,255,0.05);
+}
+.resource-item{
+  color:var(--text-primary);font-size:14px;margin-bottom:6px;
+}
+.resource-qty{color:var(--resource-qty);font-weight:600}
+
+@media(max-width:1024px){
+  .grid{grid-template-columns:1fr}
+  .container{padding:12px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="grid">
+    <div class="card">
+      <h2 class="calc-title">Degen Idle Skill calculator</h2>
+      <h3 class="calc-subtitle">This is an unofficial calculator for Degen Idle. It is not affiliated with the game or its developers.</h3>
+      
+      <div class="data-status">
+        Data status: <span id="dataStatus">Loading…</span>
+      </div>
+
+      <label>Skill</label>
+      <select id="skillSelect"><option value="">Loading skills…</option></select>
+
+      <label>Current XP</label>
+      <input id="xpCurrent" type="number" value="0" min="0" />
+
+      <label>Target Level</label>
+      <input id="lvlTarget" type="number" value="30" min="2" max="99" />
+
+      <label>Select Recipe / Mode</label>
+      <select id="modeSelect">
+        <option value="auto">Auto progression (lowest time per XP)</option>
+        <option value="manual">Manual Recipe</option>
+      </select>
+
+      <select id="recipeSelect" style="display:none"><option value="">Select a skill first</option></select>
+
+      <label>Efficiency</label>
+      <div class="input-with-steppers">
+        <input id="efficiency" type="number" value="100" min="1" max="1000" step="0.01" />
+        <div class="steppers">
+          <button class="stepper-btn" onclick="adjustValue('efficiency', 1)">▲</button>
+          <button class="stepper-btn" onclick="adjustValue('efficiency', -1)">▼</button>
+        </div>
+        <span style="position:absolute;right:32px;top:50%;transform:translateY(-50%);color:var(--text-secondary);font-size:14px">%</span>
+      </div>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="haveMats" />
+        <span>I have all the base materials needed.</span>
+      </label>
+
+      <button class="btn" id="calcBtn">Calculate</button>
+      <div id="status" class="status-text">Done ✓</div>
+      <div class="calc-footer">Dreams made it happen for the prosperity of our Kingdom</div>
+    </div>
+
+    <div class="card">
+      <div class="output-header">Outputs: Breakdown • Totals • Resources</div>
+
+      <div class="output-section">
+        <div id="breakdown"></div>
+      </div>
+
+      <div class="output-section">
+        <div class="totals-section">
+          <div id="totals" class="totals-main">Total crafts: 0 • Time: 0h 0m</div>
+          <div id="totalsSub" class="totals-sub">Eff 100% • Base time: 0h 0m</div>
+        </div>
+      </div>
+
+      <div class="output-section">
+        <div class="resources-section">
+          <div id="outResources"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const DEFAULT_SHEET_ID = "1CT8MUByrq8Cpd7qBWQiE9PMxhdYEvwY_FiQGYr_8KeI";
+const TAB_EXP = "Exp values", TAB_SKILLS = "Skills", TAB_RECIPES = "Recipes";
+
+// Central data store
+const DATA = {
+  levels: [],       // { level, xp }
+  items: [],        // { id, name, skill, minLvl, maxLvl, xpPer, timeSec, outQty }
+  recipes: [],      // recipe rows
+  itemNameMap: {},  // { id: name }
+};
+
+// Helpers
+const el = id => document.getElementById(id);
+const fmt = n => n.toLocaleString();
+const fmtTime = secs => {
+  const t = Math.round(secs);
+  const h = Math.floor(t/3600), m = Math.floor((t%3600)/60), s = t%60;
+  if(h) return `${h}h ${m}m`; if(m) return `${m}m ${s}s`; return `${s}s`;
+};
+
+// Stepper function for input adjustments
+function adjustValue(id, delta) {
+  const input = el(id);
+  if (!input) return;
+  const current = parseFloat(input.value) || 0;
+  const step = parseFloat(input.step) || 1;
+  const min = parseFloat(input.min) || -Infinity;
+  const max = parseFloat(input.max) || Infinity;
+  const newValue = Math.max(min, Math.min(max, current + (delta * step)));
+  input.value = newValue;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+// --- CSV fetch and parse ---
+const csvToRows = csv => {
+  const rows=[];let row=[],cur="",inside=false;
+  for(let c of csv){
+    if(c=='"'&&!inside){inside=true;continue;}
+    if(c=='"'&&inside){inside=false;continue;}
+    if(c==','&&!inside){row.push(cur);cur="";continue;}
+    if(c=='\n'&&!inside){row.push(cur);rows.push(row);row=[];cur="";continue;}
+    cur+=c;
+  }
+  if(cur)row.push(cur); if(row.length)rows.push(row);
+  return rows.map(r=>r.map(v=>v.trim()));
+};
+
+// Updated fetch function with better error handling
+const gviz = (id,tab)=>`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
+
+async function fetchTab(id,tab){
+  try {
+    const url = gviz(id,tab);
+    console.log(`Fetching: ${url}`);
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+    const text = await r.text();
+    if (!text || text.includes('error')) throw new Error('Empty or error response');
+    return csvToRows(text);
+  } catch (error) {
+    console.error(`Failed to fetch ${tab}:`, error);
+    // Return sample data as fallback
+    return getFallbackData(tab);
+  }
+}
+
+// Fallback data in case Google Sheets fails
+function getFallbackData(tab) {
+  if (tab === TAB_EXP) {
+    return [
+      ["Level","Exp needed"],
+      ["1","0"],["2","84"],["3","192"],["4","324"],["5","480"],["6","645"],["7","820"],["8","1005"],
+      ["9","1200"],["10","1407"],["11","1735"],["12","2082"],["13","2449"],["14","2838"],["15","3249"],
+      ["16","3684"],["17","4144"],["18","4631"],["19","5146"],["20","5691"],["21","6460"],["22","7281"],
+      ["23","8160"],["24","9101"],["25","10109"],["26","11191"],["27","12353"],["28","13603"],["29","14949"],
+      ["30","16400"],["31","18455"],["32","20675"],["33","23076"],["34","25675"],["35","28492"],["36","31549"],
+      ["37","34870"],["38","38482"],["39","42415"],["40","46702"]
+    ];
+  }
+  
+  if (tab === TAB_SKILLS) {
+    return [
+      ["Skill","Item","MinLvl","MaxLvl","XPPerItem","TimeSec","OutputQty"],
+      ["Forging","gold bar","30","99","7","40","1"],
+      ["Forging","gold gear","30","99","126","640","1"]
+    ];
+  }
+  
+  if (tab === TAB_RECIPES) {
+    return [
+      ["Item","Ingredient 1","Qty 1","Ingredient 2","Qty 2","Ingredient 3","Qty 3"],
+      ["gold bar","gold ore","2","coal ore","4","",""],
+      ["gold gear","gold bar","20","coal ore","4","",""]
+    ];
+  }
+  
+  return [[]];
+}
+
+// --- Load all tabs ---
+async function loadAll(id){
+  try{
+    el("dataStatus").innerHTML = "Fetching data...";
+    
+    const [exp,skills,recipes] = await Promise.all([
+      fetchTab(id,TAB_EXP),fetchTab(id,TAB_SKILLS),fetchTab(id,TAB_RECIPES)
+    ]);
+
+    // XP levels
+    DATA.levels = exp.slice(1).map(r=>({level:+r[0],xp:+r[1]})).filter(x=>!isNaN(x.level));
+
+    // Skills
+    const sh = skills[0].map(h=>h.trim().toLowerCase());
+    const f = h=>sh.findIndex(x=>x===h.toLowerCase());
+    DATA.items = skills.slice(1).map(r=>{
+      const skill=r[f("skill")], item=r[f("item")];
+      if(!skill||!item)return null;
+      const obj={
+        skill,
+        id:item,
+        name:item,
+        minLvl:+r[f("minlvl")]||1,
+        maxLvl:+r[f("maxlvl")]||99,
+        xpPer:+r[f("xpperitem")]||0,
+        timeSec:+r[f("timesec")]||1,
+        outQty:+r[f("outputqty")]||1
+      };
+      DATA.itemNameMap[item]=item;
+      return obj;
+    }).filter(Boolean);
+
+    // Recipes
+    const rh=recipes[0];
+    DATA.recipes=recipes.slice(1).map(r=>{
+      const o={};rh.forEach((c,i)=>o[c.trim()]=r[i]?r[i].trim():"");return o;
+    });
+
+    // Populate skills dropdown
+    const skillsSet=[...new Set(DATA.items.map(i=>i.skill))].sort();
+    const sel=el("skillSelect");
+    sel.innerHTML="";
+    skillsSet.forEach(s=>{
+      const o=document.createElement("option");
+      o.value=s;o.textContent=s;sel.appendChild(o);
+    });
+    sel.addEventListener("change",updateRecipeDropdown);
+    el("xpCurrent").addEventListener("change",updateRecipeDropdown);
+    el("xpCurrent").addEventListener("input",updateRecipeDropdown);
+    el("modeSelect").addEventListener("change",updateRecipeDropdown);
+
+    el("dataStatus").innerHTML = "Ready <span class='status-indicator'>✓</span>";
+    el("dataStatus").className = "data-status";
+    
+    console.log("Data loaded:", {
+      levels: DATA.levels.length,
+      items: DATA.items.length,
+      recipes: DATA.recipes.length
+    });
+    
+  }catch(e){
+    console.error("Load error:", e);
+    el("dataStatus").innerHTML="Error: " + e.message;
+    el("dataStatus").style.color="#ff6b6b";
+  }
+}
+
+// --- XP helpers ---
+const levelToXP = lvl => (DATA.levels.find(x=>x.level===lvl)||{}).xp||0;
+function xpToLevel(xp){
+  for(let i=DATA.levels.length-1;i>=0;i--){
+    if(xp>=DATA.levels[i].xp)return DATA.levels[i].level;
+  }
+  return 1;
+}
+
+// --- Best Recipe Selection ---
+function bestRecipeForLevel(skill, lvl, haveBaseMats = false) {
+  const options = DATA.items.filter(i => i.skill === skill && i.minLvl <= lvl);
+  if (!options.length) return null;
+  
+  // Calculate XP/hour for each recipe, only counting XP for the chosen skill
+  let bestRecipe = null;
+  let bestXpPerHour = 0;
+  
+  for (const recipe of options) {
+    // Simulate one craft to get total XP and time (including sub-recipes)
+    const oneCraft = simulateRecipe(recipe.id, 1, new Set(), haveBaseMats);
+    
+    // Get XP for the chosen skill only
+    const skillXP = oneCraft.xp[skill] || 0;
+    
+    // Calculate total time (in seconds)
+    const totalTime = oneCraft.time;
+    
+    // Calculate XP per hour (XP/hour = (XP / time_seconds) * 3600)
+    // Avoid division by zero
+    if (totalTime > 0 && skillXP > 0) {
+      const xpPerHour = (skillXP / totalTime) * 3600;
+      
+      if (xpPerHour > bestXpPerHour) {
+        bestXpPerHour = xpPerHour;
+        bestRecipe = recipe;
+      }
+    } else if (haveBaseMats && recipe.xpPer > 0 && recipe.timeSec > 0) {
+      // If we have base materials, use top-level XP only
+      const xpPerHour = (recipe.xpPer / recipe.timeSec) * 3600;
+      if (xpPerHour > bestXpPerHour) {
+        bestXpPerHour = xpPerHour;
+        bestRecipe = recipe;
+      }
+    }
+  }
+  
+  return bestRecipe || options[0]; // Fallback to first option if no valid recipe found
+}
+
+// --- Recipe dropdown ---
+function updateRecipeDropdown(){
+  const skill=el("skillSelect").value;
+  const mode=el("modeSelect").value;
+  const recipeSelect=el("recipeSelect");
+
+  if(mode==="auto"){
+    recipeSelect.style.display="none";
+    return;
+  }
+  recipeSelect.style.display="block";
+  recipeSelect.innerHTML="";
+
+  // Calculate current level from current XP (not target level)
+  const xpCur = +el("xpCurrent").value || 0;
+  const currentLvl = DATA.levels.length > 0 ? xpToLevel(xpCur) : 1;
+
+  const available=DATA.items.filter(i=>i.skill===skill && i.minLvl<=currentLvl);
+  if(!available.length){
+    recipeSelect.innerHTML="<option value=''>No recipes unlocked at your current level</option>";
+    return;
+  }
+  available.forEach(r=>{
+    const o=document.createElement("option");
+    o.value=r.id;o.textContent=`${r.name} (Lvl ${r.minLvl}+ XP:${r.xpPer})`;
+    recipeSelect.appendChild(o);
+  });
+}
+
+// --- Recursive subcraft simulation ---
+function simulateRecipe(itemName, qty, visited = new Set(), haveBaseMats = false, topLevel = true) {
+  const recipeRow = DATA.recipes.find(r => r["Item"] && r["Item"].trim().toLowerCase() === itemName.trim().toLowerCase());
+  const result = { resources: {}, xp: {}, time: 0, subRecipes: {} };
+
+  // If not craftable → base resource
+  if (!recipeRow) {
+    if (!haveBaseMats) {
+      result.resources[itemName] = (result.resources[itemName] || 0) + qty;
+    }
+    return result;
+  }
+
+  // Find skill info for XP/time of THIS craft
+  const craftInfo = DATA.items.find(i => i.id === itemName);
+  if (craftInfo) {
+    const totalXP = craftInfo.xpPer * qty;
+    result.xp[craftInfo.skill] = (result.xp[craftInfo.skill] || 0) + totalXP;
+    // Only count time for top-level crafts, or if we don't have base materials
+    if (topLevel || !haveBaseMats) {
+      result.time += craftInfo.timeSec * qty;
+    }
+  }
+
+  // Avoid circular references
+  if (visited.has(itemName)) return result;
+  visited.add(itemName);
+
+  // For each ingredient slot - recursively simulate sub-crafts
+  for (let i = 1; i <= 3; i++) {
+    const ingr = recipeRow[`Ingredient ${i}`];
+    const q = +recipeRow[`Qty ${i}`];
+    if (ingr && q) {
+      const subQty = qty * q;
+      
+      // Check if this ingredient is a sub-recipe (has its own recipe)
+      const ingrHasRecipe = DATA.recipes.some(r => r["Item"] && r["Item"].trim().toLowerCase() === ingr.trim().toLowerCase());
+      if (ingrHasRecipe) {
+        // This is a sub-recipe - track it
+        result.subRecipes[ingr] = (result.subRecipes[ingr] || 0) + subQty;
+      }
+      
+      const sub = simulateRecipe(ingr, subQty, visited, haveBaseMats, false); // Pass false for topLevel
+      
+      // Merge results - always include resources and XP
+      for (const [res, amt] of Object.entries(sub.resources))
+        result.resources[res] = (result.resources[res] || 0) + amt;
+      for (const [skill, x] of Object.entries(sub.xp))
+        result.xp[skill] = (result.xp[skill] || 0) + x;
+      // Merge sub-recipes from nested crafts
+      for (const [subRecipe, amt] of Object.entries(sub.subRecipes))
+        result.subRecipes[subRecipe] = (result.subRecipes[subRecipe] || 0) + amt;
+      // Add sub-craft time (sub-recipes won't have added time if haveBaseMats is true)
+      result.time += sub.time;
+    }
+  }
+  return result;
+}
+
+// --- XP / Simulation Runner ---
+function runSimulation() {
+  const skill = el("skillSelect").value;
+  const mode = el("modeSelect").value;
+  const eff = +el("efficiency").value;
+  const xpCur = +el("xpCurrent").value || 0;
+  const lvlTgt = +el("lvlTarget").value;
+  const recipeId = el("recipeSelect").value;
+  const haveBaseMats = el("haveMats").checked;
+
+  if (!skill) return alert("Please select a skill.");
+  if (!DATA.levels.length) return alert("Data not ready yet!");
+
+  const tgtXP = levelToXP(lvlTgt);
+  const currentLvl = xpToLevel(xpCur);
+  let remainingXP = tgtXP - xpCur;
+  if (remainingXP <= 0) return alert("Already reached target level!");
+
+  let totalTime = 0;
+  let baseTime = 0;
+  const totalResources = {};
+  const xpBySkill = {};
+  const breakdownSegments = [];
+
+  // --- MANUAL MODE ---
+  if (mode === "manual") {
+    const it = DATA.items.find(i => i.id === recipeId && i.skill === skill);
+    if (!it) return alert("Recipe not found!");
+
+    // Calculate XP per craft based on checkbox
+    let totalXPPerCraft, crafts, segmentTime;
+    
+    if (haveBaseMats) {
+      totalXPPerCraft = it.xpPer;
+      crafts = Math.ceil(remainingXP / totalXPPerCraft);
+      const sub = simulateRecipe(it.id, crafts, new Set(), false);
+      for (const [res, amt] of Object.entries(sub.resources))
+        totalResources[res] = (totalResources[res] || 0) + amt;
+      segmentTime = sub.time;
+      baseTime += segmentTime;
+      totalTime += segmentTime * (100 / Math.max(eff, 0.1));
+    } else {
+      const oneCraft = simulateRecipe(it.id, 1, new Set(), false);
+      totalXPPerCraft = Object.values(oneCraft.xp).reduce((a, b) => a + b, 0);
+      crafts = Math.ceil(remainingXP / totalXPPerCraft);
+      const sub = simulateRecipe(it.id, crafts, new Set(), false);
+      for (const [sk, x] of Object.entries(sub.xp))
+        xpBySkill[sk] = (xpBySkill[sk] || 0) + x;
+      for (const [res, amt] of Object.entries(sub.resources))
+        totalResources[res] = (totalResources[res] || 0) + amt;
+      segmentTime = sub.time;
+      baseTime += segmentTime;
+      totalTime += segmentTime * (100 / Math.max(eff, 0.1));
+    }
+    
+    // Get sub-recipes for this recipe
+    const oneCraftSim = simulateRecipe(it.id, 1, new Set(), haveBaseMats);
+    const subRecipesForThis = {};
+    for (const [subRecipe, qty] of Object.entries(oneCraftSim.subRecipes)) {
+      subRecipesForThis[subRecipe] = qty * crafts; // Scale by number of crafts
+    }
+    
+    breakdownSegments.push({
+      name: it.name,
+      start: currentLvl,
+      end: lvlTgt,
+      crafts: crafts,
+      time: segmentTime,
+      subRecipes: subRecipesForThis
+    });
+  }
+
+// --- AUTO MODE (FIXED TO ONLY COUNT CURRENT SKILL XP) ---
+else {
+  let lvl = currentLvl;
+  let xpNow = xpCur;
+  let currentRecipe = null;
+  let currentSegment = null;
+  
+  // Check if we have any recipes available at all
+  const availableRecipes = DATA.items.filter(i => i.skill === skill && i.minLvl <= lvl);
+  if (availableRecipes.length === 0) {
+    el("breakdown").innerHTML = "<div class='breakdown-card'>No recipes available for this skill at your level!</div>";
+    return;
+  }
+
+  while (xpNow < tgtXP && lvl <= lvlTgt) {
+    const rec = bestRecipeForLevel(skill, lvl, haveBaseMats);
+    if (!rec) {
+      break;
+    }
+
+    // Check if recipe changed - if so, finalize previous segment and start new one
+    if (currentRecipe && currentRecipe.id !== rec.id) {
+      if (currentSegment) {
+        breakdownSegments.push(currentSegment);
+      }
+      // Get sub-recipes for this recipe
+      const oneCraftSim = simulateRecipe(rec.id, 1, new Set(), haveBaseMats);
+      const subRecipesForThis = {};
+      for (const [subRecipe, qty] of Object.entries(oneCraftSim.subRecipes)) {
+        subRecipesForThis[subRecipe] = 0; // Will accumulate as we craft
+      }
+      
+      currentSegment = {
+        name: rec.name,
+        start: lvl,
+        end: lvl,
+        crafts: 0,
+        time: 0,
+        subRecipes: subRecipesForThis
+      };
+    } else if (!currentSegment) {
+      // First segment
+      // Get sub-recipes for this recipe
+      const oneCraftSim = simulateRecipe(rec.id, 1, new Set(), haveBaseMats);
+      const subRecipesForThis = {};
+      for (const [subRecipe, qty] of Object.entries(oneCraftSim.subRecipes)) {
+        subRecipesForThis[subRecipe] = 0; // Will accumulate as we craft
+      }
+      
+      currentSegment = {
+        name: rec.name,
+        start: lvl,
+        end: lvl,
+        crafts: 0,
+        time: 0,
+        subRecipes: subRecipesForThis
+      };
+    }
+
+    currentRecipe = rec;
+
+    // Calculate XP per craft based on checkbox
+    let forgingXPPerCraft;
+    if (haveBaseMats) {
+      forgingXPPerCraft = rec.xpPer;
+    } else {
+      const oneCraft = simulateRecipe(rec.id, 1, new Set(), false);
+      forgingXPPerCraft = oneCraft.xp[skill] || 0;
+    }
+
+    const xpNext = levelToXP(Math.min(lvl + 1, lvlTgt));
+    const xpGap = xpNext - xpNow;
+    const remainingOverall = tgtXP - xpNow;
+    const xpNeeded = Math.min(xpGap, remainingOverall);
+    const crafts = Math.ceil(xpNeeded / forgingXPPerCraft);
+
+    // Simulate the crafting
+    const sub = simulateRecipe(rec.id, crafts, new Set(), haveBaseMats);
+    const segmentTime = sub.time;
+    baseTime += segmentTime;
+    totalTime += segmentTime * (100 / Math.max(eff, 0.1));
+    
+    // Merge results
+    for (const [sk, x] of Object.entries(sub.xp)) {
+      xpBySkill[sk] = (xpBySkill[sk] || 0) + x;
+      if (sk === skill) {
+        xpNow += x;
+      }
+    }
+    
+    for (const [res, amt] of Object.entries(sub.resources))
+      totalResources[res] = (totalResources[res] || 0) + amt;
+
+    // Update current segment
+    currentSegment.crafts += crafts;
+    currentSegment.time += segmentTime;
+    currentSegment.end = Math.min(lvl + 1, lvlTgt);
+    // Accumulate sub-recipes
+    for (const [subRecipe, qty] of Object.entries(sub.subRecipes)) {
+      currentSegment.subRecipes[subRecipe] = (currentSegment.subRecipes[subRecipe] || 0) + qty;
+    }
+
+    lvl++;
+    if (lvl > 99) break;
+  }
+
+  // Add final segment if exists
+  if (currentSegment) {
+    breakdownSegments.push(currentSegment);
+  }
+}
+
+  // --- OUTPUT RENDERING ---
+  // Render Breakdown
+  const breakdownHtml = breakdownSegments.map(seg => {
+    const segTime = seg.time * (100 / Math.max(eff, 0.1));
+    const subRecipeEntries = Object.entries(seg.subRecipes || {});
+    const subRecipeText = subRecipeEntries.length > 0 
+      ? `<div class="breakdown-stat">Sub-recipes: ${subRecipeEntries.map(([name, qty]) => `${name}: ${fmt(qty)}`).join(', ')}</div>`
+      : '';
+    return `
+      <div class="breakdown-card">
+        <div class="breakdown-item-name">${seg.name}</div>
+        <div class="breakdown-level">Lvl ${seg.start}→${seg.end}</div>
+        <div class="breakdown-stat">Crafts: ${fmt(seg.crafts)}</div>
+        ${subRecipeText}
+        <div class="breakdown-stat time">${fmtTime(segTime)}</div>
+      </div>
+    `;
+  }).join('');
+  el("breakdown").innerHTML = breakdownHtml || "<div class='breakdown-card'>No breakdown available</div>";
+
+  // Render Totals
+  const totalCrafts = breakdownSegments.reduce((sum, seg) => sum + seg.crafts, 0);
+  const totalXP = Object.values(xpBySkill).reduce((sum, xp) => sum + xp, 0);
+  
+  // Count unique sub-recipes across all segments
+  const allSubRecipes = new Set();
+  breakdownSegments.forEach(seg => {
+    Object.keys(seg.subRecipes || {}).forEach(subRecipe => {
+      allSubRecipes.add(subRecipe);
+    });
+  });
+  const subRecipeCount = allSubRecipes.size;
+  
+  // Format XP by skill
+  const xpBySkillText = Object.entries(xpBySkill)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([skillName, xp]) => `${skillName}: ${fmt(xp)}`)
+    .join(' • ');
+  
+  el("totals").textContent = `Total crafts: ${fmt(totalCrafts)} • Time: ${fmtTime(totalTime)}`;
+  if (xpBySkillText) {
+    el("totalsSub").textContent = `XP: ${xpBySkillText} • Eff ${eff}% • Base time: ${fmtTime(baseTime)} • Sub-recipes: ${subRecipeCount}`;
+  } else {
+    el("totalsSub").textContent = `Eff ${eff}% • Base time: ${fmtTime(baseTime)} • Sub-recipes: ${subRecipeCount}`;
+  }
+
+  // Render Resources
+  const resourcesHtml = Object.entries(totalResources)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, qty]) => {
+      return `<div class="resource-item">${name}: <span class="resource-qty">${fmt(qty)}</span></div>`;
+    }).join('');
+  el("outResources").innerHTML = resourcesHtml || "<div class='resource-item'>No resources needed</div>";
+
+  el("status").innerHTML = "Done <span style='color:var(--success)'>✓</span>";
+}
+
+// --- Init ---
+el("calcBtn").addEventListener("click", runSimulation);
+
+// Start loading data when page loads
+window.addEventListener('DOMContentLoaded', () => {
+  loadAll(DEFAULT_SHEET_ID);
+});
+</script>
+</body>
+</html>
