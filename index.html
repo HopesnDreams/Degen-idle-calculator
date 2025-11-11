@@ -551,7 +551,10 @@ function runSimulation() {
       totalTime += segmentTime * (100 / Math.max(eff, 0.1));
     } else {
       const oneCraft = simulateRecipe(it.id, 1, new Set(), false);
-      totalXPPerCraft = Object.values(oneCraft.xp).reduce((a, b) => a + b, 0);
+      totalXPPerCraft = oneCraft.xp[skill] || 0;
+      if (!totalXPPerCraft || totalXPPerCraft <= 0 || !isFinite(totalXPPerCraft)) {
+        return alert(`This recipe does not give ${skill} XP. Please select a different recipe.`);
+      }
       crafts = Math.ceil(remainingXP / totalXPPerCraft);
       const sub = simulateRecipe(it.id, crafts, new Set(), false);
       for (const [sk, x] of Object.entries(sub.xp))
@@ -800,4 +803,5 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
+
 </html>
